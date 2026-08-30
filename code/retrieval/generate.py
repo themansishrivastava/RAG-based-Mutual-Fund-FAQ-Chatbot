@@ -36,7 +36,7 @@ def generate(question: str, hits: list[dict]) -> str:
                 {"role": "user", "content": user},
             ],
         },
-        timeout=60,
+        timeout=20,
     )
     response.raise_for_status()
     text = response.json()["choices"][0]["message"]["content"].strip()

@@ -123,17 +123,12 @@ if question:
     with st.chat_message("user"):
         st.markdown(question)
     with st.chat_message("assistant"):
-        with st.spinner("Looking up indexed Groww pages…"):
+        with st.spinner("Looking up the indexed fund page…"):
             try:
                 result = answer(question, generate_llm=True)
             except Exception as exc:
                 result = {
-                    "text": (
-                        "The fund index is not ready on this server. "
-                        "The deploy build must run `python code/ingest.py` so Chroma "
-                        "collection `hdfc_groww_faq` exists.\n\n"
-                        f"Details: {exc}"
-                    )
+                    "text": f"Could not answer right now. Refresh and try again.\n\nDetails: {exc}"
                 }
         st.markdown(result["text"])
     st.session_state.messages.append({"role": "assistant", "content": result["text"]})

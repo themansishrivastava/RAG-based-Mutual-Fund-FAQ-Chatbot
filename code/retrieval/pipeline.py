@@ -6,9 +6,10 @@ import re
 
 import setup_paths  # noqa: F401
 
-from guardrails import classify, named_funds, _format
-from retrieve import retrieve
+from guardrails import classify, named_funds, _format, DEFAULT_URL
+from retrieve import retrieve, facts_for_url
 from generate import generate
+from facts_answer import from_facts
 
 _CAPITAL_GAINS = re.compile(r"capital\s*gains?.{0,40}(statement|download|how)", re.I)
 _HOW_TO = re.compile(r"\b(download|statement|how to|steps?)\b", re.I)
@@ -18,17 +19,13 @@ def answer(question: str, generate_llm: bool = True) -> dict:
     ingested_at = "unknown"
     refused = classify(question)
     if refused:
-        retrieved = retrieve(question)
-        if retrieved["citation"] and refused["kind"] not in ("refuse_empty", "refuse_pii"):
-            ingested_at = retrieved["citation"]["ingested_at"]
-            refused["url"] = retrieved["citation"]["source_url"]
-        elif retrieved["citation"]:
-            ingested_at = retrieved["citation"]["ingested_at"]
+        hit = facts_for_url(refused["url"]) or facts_for_url(DEFAULT_URL)
+        ingested_at = hit["ingested_at"] if hit else "unknown"
         text = _format(refused["body"], refused["url"], ingested_at)
         return {
             "kind": refused["kind"],
             "text": text,
-            "hits": retrieved["hits"],
+            "hits": [hit] if hit else [],
             "weak": False,
         }
 
@@ -56,6 +53,24 @@ def answer(question: str, generate_llm: bool = True) -> dict:
         body = "I don’t have that in the indexed pages."
         return {
             "kind": "weak",
+            "text": _format(body, url, ingested_at),
+            "hits": hits,
+            "weak": True,
+        }
+
+    grounded = from_facts(question, hits)
+    if grounded:
+        return {
+            "kind": "answer",
+            "text": _format(grounded, url, ingested_at),
+            "hits": hits,
+            "weak": False,
+        }
+
+    if re.search(r"lock-?in", question, re.I):
+        body = "I don’t have a lock-in figure in the indexed pages for this fund."
+        return {
+            "kind": "not_in_corpus",
             "text": _format(body, url, ingested_at),
             "hits": hits,
             "weak": True,

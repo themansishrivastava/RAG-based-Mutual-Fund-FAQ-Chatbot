@@ -62,30 +62,34 @@ def _facts_hit(collection, url: str) -> dict | None:
     }
 
 
+def facts_for_url(url: str) -> dict | None:
+    collection = get_collection()
+    return _facts_hit(collection, url)
+
+
 def retrieve(question: str, primary_url: str | None = None) -> dict:
     collection = get_collection()
-    query_vec = embed_texts([question])[0]
+    hits: list[dict] = []
 
-    kwargs = {
-        "query_embeddings": [query_vec],
-        "n_results": TOP_K,
-        "include": ["documents", "metadatas", "distances"],
-    }
     if primary_url:
-        scoped = _as_hits(collection.query(**kwargs, where={"source_url": primary_url}))
-        global_hits = _as_hits(collection.query(**kwargs))
-        seen = {h["chunk_id"] for h in scoped}
-        hits = scoped + [h for h in global_hits if h["chunk_id"] not in seen]
         facts = _facts_hit(collection, primary_url)
         if facts:
-            hits = [facts] + [h for h in hits if h["chunk_id"] != facts["chunk_id"]]
-        hits = hits[:TOP_K]
+            hits = [facts]
     else:
-        hits = _as_hits(collection.query(**kwargs))
-        facts = [h for h in hits if "Fund facts from this Groww page:" in h["text"]]
-        rest = [h for h in hits if h not in facts]
-        if facts:
-            hits = facts + rest
+        try:
+            query_vec = embed_texts([question])[0]
+            raw = collection.query(
+                query_embeddings=[query_vec],
+                n_results=TOP_K,
+                include=["documents", "metadatas", "distances"],
+            )
+            hits = _as_hits(raw)
+            facts = [h for h in hits if "Fund facts from this Groww page:" in h["text"]]
+            rest = [h for h in hits if h not in facts]
+            if facts:
+                hits = facts + rest
+        except Exception:
+            hits = []
 
     blob = " ".join(h["text"].lower() for h in hits)
     has_fact = any(
