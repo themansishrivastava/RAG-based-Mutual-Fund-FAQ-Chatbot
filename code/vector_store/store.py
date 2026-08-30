@@ -36,6 +36,13 @@ def rebuild_collection(ids, documents, embeddings, metadatas):
 
 
 def get_collection():
-    """Read-only query path. Collection must already exist."""
+    """Read-only query path. Collection must already exist (run ingest first)."""
     chroma = client()
-    return chroma.get_collection(name=COLLECTION_NAME)
+    try:
+        return chroma.get_collection(name=COLLECTION_NAME)
+    except Exception as exc:
+        raise RuntimeError(
+            "Chroma collection hdfc_groww_faq is missing. "
+            "On Render, the build must run: python code/ingest.py "
+            "(data/chroma is not in git)."
+        ) from exc
