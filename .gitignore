@@ -1,0 +1,13 @@
+.env
+data/raw/*
+!data/raw/.gitkeep
+data/chunks/*
+!data/chunks/.gitkeep
+data/embeddings/*
+!data/embeddings/.gitkeep
+data/chroma/*
+!data/chroma/.gitkeep
+__pycache__/
+*.pyc
+.venv/
+venv/
