@@ -4,7 +4,7 @@ services:
     runtime: python
     pythonVersion: "3.11.11"
     buildCommand: pip install -r requirements.txt && python code/ingest.py
-    startCommand: streamlit run code/ui/app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true
+    startCommand: python code/ensure_index.py && streamlit run code/ui/app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true
     envVars:
       - key: MISTRAL_API_KEY
         sync: false
